@@ -1,0 +1,132 @@
+﻿<!doctype html>
+<html ng-app="currencyApp">
+<head>
+    <meta charset="utf-8">
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.4/angular.min.js"></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+    <title>Курсы валют</title>
+</head>
+<body>
+    <style>
+        .disabled {
+            pointer-events: none;
+            opacity: 0.5;
+        }
+    </style>
+    <div class="container form" ng-controller="currencyCtrl" ng-class="wait">
+        <div class="page-header">
+            <h1>Курсы валют</h1>
+        </div>
+        <div class="panel">
+            <button class="btn btn-primary" ng-click="curUpd()">Загрузить валюты</button>
+            <button class="btn btn-primary" ng-show="updated" ng-click="curList()">Отобразить валюты</button>
+        </div>
+        <div class="panel" ng-show="filled">
+            <select class="form-control" ng-model="selected" ng-options="item.name for item in list" ng-change="curShow(selected)">
+                <option value="">Выберите валюту</option>
+            </select>
+        </div>
+        <div id="chart" class="panel"></div>
+    </div>
+
+    <script>
+        var currencyApp = angular.module("currencyApp", []);
+        currencyApp.controller("currencyCtrl", function ($scope, $http) {
+            $scope.list = [];
+            $scope.updated = false;
+            $scope.filled = false;
+            $scope.selected = {};
+            $scope.wait = "";
+            $scope.curUpd = function () {
+                $scope.wait = "disabled";
+                $http.get("Currency/UpdateCurrencies")
+                    .then(function (response) {
+                        $scope.updated = response.data;
+                        $scope.wait = "";
+                    }, function (response) {
+                        //error
+                        $scope.wait = "";
+                        alert("Не удалось обновить курсы валют");
+                    });
+            }
+            $scope.curList = function () {
+                $scope.filled = false;
+                resetChart();
+                $http.get("Currency/GetCurrencies")
+                    .then(function (response) {
+                        $scope.list = response.data;
+                        $scope.filled = true;
+                    }, function (response) {
+                        //error
+                        alert("Не удалось получить список валют");
+                    });
+            }
+            $scope.curShow = function (cur) {
+                if (cur != null) {
+                    $http.get(`Currency/GetRates?id=${cur.id}`)
+                        .then(function (response) {
+                            showChart(response.data);
+                        }, function (response) {
+                            //error
+                            alert("Не удалось отобразить график");
+                        })
+                }
+                else
+                    resetChart();
+            }
+        })
+        function resetChart() {
+            document.getElementById("chart").innerHTML = "";
+        }
+        function showChart(chartData) {
+            Highcharts.chart('chart', {
+                chart: {
+                    marginBottom: 80
+                },
+                title: {
+                    text: 'График изменения курса ' + chartData.name
+                },
+                subtitle: {
+                    text: '<a href="http://www.cbr.ru/">Центральный Банк РФ</a>'
+                },
+                xAxis: {
+                    categories: chartData.dates,
+                    labels: {
+                        rotation: 0
+                    },
+                    gridLineWidth: 1
+                },
+                series: [{
+                    name: chartData.name,
+                    data: chartData.values
+                }],
+                legend: {
+                    enabled: false
+                },
+                credits: {
+                    enabled: false
+                },
+                yAxis: [{
+                    title: {
+                        text: 'Руб.'
+                    },
+                    showFirstLabel: false
+                }, {
+                    linkedTo: 0,
+                    gridLineWidth: 0,
+                    opposite: true,
+                    title: {
+                        text: null
+                    },
+                    showFirstLabel: false
+                }],
+                tooltip: {
+                    shared: true,
+                    crosshairs: true
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+﻿
+dotnet ef dbcontext scaffold "Server=.\sqlexpress;Database=db_webapp;Trusted_Connection=True;" Microsoft.EntityFrameworkCore.SqlServer -o Models -f -c CurrencyContext
